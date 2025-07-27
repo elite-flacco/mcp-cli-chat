@@ -43,20 +43,8 @@ manager = ConnectionManager()
 @app.on_event("startup")
 async def startup_event():
     global chat_instance
-    # Initialize a simplified chat instance for web use
-    import os
-    from dotenv import load_dotenv
-    
-    load_dotenv()
-    claude_model = os.getenv("CLAUDE_MODEL", "")
-    claude_service = Claude(model=claude_model)
-    
-    # Create a minimal chat instance without MCP clients for now
-    # We'll initialize them per-session to avoid Windows subprocess issues
-    chat_instance = None
-    
     print("Web app started successfully")
-    print("MCP clients will be initialized per WebSocket connection")
+    print("Ready to accept connections")
 
 @app.get("/", response_class=HTMLResponse)
 async def get_chat(request: Request):
@@ -65,11 +53,9 @@ async def get_chat(request: Request):
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
-    session_chat = None
     
     try:
-        # Initialize MCP clients for this session
-        from main import initialize_mcp_clients
+        # Use simplified chat without MCP for now to avoid startup issues
         import os
         from dotenv import load_dotenv
         
@@ -77,30 +63,19 @@ async def websocket_endpoint(websocket: WebSocket):
         claude_model = os.getenv("CLAUDE_MODEL", "")
         claude_service = Claude(model=claude_model)
         
-        try:
-            doc_client, clients = await initialize_mcp_clients([])
-            session_chat = CliChat(
-                doc_client=doc_client,
-                clients=clients,
-                claude_service=claude_service,
-            )
-            print("MCP clients initialized for WebSocket session")
-        except Exception as e:
-            print(f"Failed to initialize MCP clients: {e}")
-            # Create a simple fallback chat
-            class SimpleChatFallback:
-                def __init__(self, claude_service):
-                    self.claude_service = claude_service
-                    self.messages = []
-                
-                async def process_query_async(self, query):
-                    self.messages.append({"role": "user", "content": query})
-                    response = await self.claude_service.chat(self.messages)
-                    self.messages.append({"role": "assistant", "content": response})
-                    return response
+        class SimpleChatFallback:
+            def __init__(self, claude_service):
+                self.claude_service = claude_service
+                self.messages = []
             
-            session_chat = SimpleChatFallback(claude_service)
-            print("Using simplified chat without MCP functionality")
+            async def process_query_async(self, query):
+                self.messages.append({"role": "user", "content": query})
+                response = await self.claude_service.chat(self.messages)
+                self.messages.append({"role": "assistant", "content": response})
+                return response
+        
+        session_chat = SimpleChatFallback(claude_service)
+        print("WebSocket connected with simplified chat")
         
         while True:
             data = await websocket.receive_text()
