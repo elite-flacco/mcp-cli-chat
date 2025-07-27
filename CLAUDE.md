@@ -43,7 +43,90 @@ Then open your browser to http://localhost:8000
 
 ## Development Commands
 
-No lint, type check, or test commands are currently configured in this project.
+### Testing
+
+This project includes a comprehensive test suite using pytest. Install test dependencies:
+
+```bash
+# Install test dependencies
+uv pip install -e ".[test]"
+```
+
+Run tests with these commands:
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run tests with coverage report
+uv run pytest --cov=core --cov=. --cov-report=html --cov-report=term-missing
+
+# Run tests in verbose mode
+uv run pytest -v
+
+# Run only unit tests
+uv run pytest -m unit
+
+# Run only integration tests  
+uv run pytest -m integration
+
+# Run tests for a specific module
+uv run pytest tests/core/test_claude.py
+
+# Run tests with specific pattern
+uv run pytest -k "test_chat"
+```
+
+Alternative using project scripts (if configured):
+```bash
+uv run test                    # Run all tests
+uv run test-coverage          # Run with coverage
+uv run test-verbose           # Run in verbose mode
+uv run test-unit             # Run unit tests only
+uv run test-integration      # Run integration tests only
+```
+
+### Test Structure
+
+The test suite is organized as follows:
+
+- `tests/core/test_claude.py` - Tests for Anthropic API wrapper
+- `tests/core/test_chat.py` - Tests for base chat functionality  
+- `tests/core/test_cli_chat.py` - Tests for CLI chat with document support
+- `tests/test_mcp_server.py` - Tests for MCP document server
+- `tests/test_mcp_client.py` - Tests for MCP client communication
+- `tests/test_web_app.py` - Tests for FastAPI web interface
+- `tests/conftest.py` - Shared fixtures and test configuration
+
+### Test Markers
+
+Tests are marked with the following categories:
+
+- `@pytest.mark.unit` - Fast unit tests that don't require external dependencies
+- `@pytest.mark.integration` - Integration tests that test component interactions
+- `@pytest.mark.slow` - Tests that take longer to run
+- `@pytest.mark.network` - Tests requiring network access (skipped by default)
+
+### Coverage Reports
+
+HTML coverage reports are generated in the `htmlcov/` directory. Open `htmlcov/index.html` in your browser to view detailed coverage information.
+
+### Debugging Tests
+
+For debugging failing tests:
+
+```bash
+# Run tests with Python debugger
+uv run pytest --pdb
+
+# Run tests with more detailed output
+uv run pytest -vvv --tb=long
+
+# Run a single test method
+uv run pytest tests/core/test_claude.py::TestClaude::test_chat_basic -v
+```
+
+### MCP Debugging
 
 To run the MCP inspector for debugging:
 ```bash
