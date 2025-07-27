@@ -90,6 +90,35 @@ assert anthropic_api_key, (
 )
 
 
+async def initialize_mcp_clients(server_scripts: list = None):
+    """Initialize MCP clients and return them"""
+    logger = logging.getLogger(__name__)
+    
+    if server_scripts is None:
+        server_scripts = []
+    
+    clients = {}
+
+    command, args = (
+        ("uv", ["run", "mcp_server.py"])
+        if os.getenv("USE_UV", "0") == "1"
+        else ("python", ["mcp_server.py"])
+    )
+
+    # Create doc client
+    doc_client = MCPClient(command=command, args=args)
+    await doc_client.__aenter__()
+    clients["doc_client"] = doc_client
+
+    # Create additional clients for server scripts
+    for i, server_script in enumerate(server_scripts):
+        client_id = f"client_{i}_{server_script}"
+        client = MCPClient(command="uv", args=["run", server_script])
+        await client.__aenter__()
+        clients[client_id] = client
+
+    return doc_client, clients
+
 async def main():
     # Set up logging
     logger = setup_logging()

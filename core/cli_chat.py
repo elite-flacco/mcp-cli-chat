@@ -125,6 +125,21 @@ class CliChat(Chat):
         else:
             logger.debug("Query does not reference any documents")
 
+    async def process_query_async(self, query: str) -> str:
+        """Process a query and return the assistant's response"""
+        logger.info(f"Processing async query: {query[:100]}...")
+        
+        await self._process_query(query)
+        
+        # Get response from Claude
+        response = await self.claude_service.chat(self.messages)
+        logger.info(f"Received response from Claude (length: {len(response)})")
+        
+        # Add assistant response to conversation
+        self.messages.append({"role": "assistant", "content": response})
+        
+        return response
+
 
 def convert_prompt_message_to_message_param(
     prompt_message: "PromptMessage",

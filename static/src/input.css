@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  
+  body {
+    @apply bg-chat-bg text-chat-text font-mono;
+  }
+}
+
+@layer components {
+  .chat-container {
+    @apply max-w-4xl mx-auto h-screen flex flex-col bg-chat-surface border border-chat-border;
+  }
+  
+  .chat-header {
+    @apply px-6 py-4 border-b border-chat-border bg-chat-surface/50 backdrop-blur;
+  }
+  
+  .chat-messages {
+    @apply flex-1 overflow-y-auto p-6 space-y-4;
+  }
+  
+  .message {
+    @apply max-w-none prose prose-invert;
+  }
+  
+  .message-user {
+    @apply bg-chat-user/10 border border-chat-user/20 rounded-lg p-4;
+  }
+  
+  .message-assistant {
+    @apply bg-chat-assistant/10 border border-chat-assistant/20 rounded-lg p-4;
+  }
+  
+  .message-error {
+    @apply bg-chat-error/10 border border-chat-error/20 rounded-lg p-4 text-chat-error;
+  }
+  
+  .chat-input-container {
+    @apply p-6 border-t border-chat-border bg-chat-surface/50 backdrop-blur;
+  }
+  
+  .chat-input {
+    @apply w-full bg-chat-bg border border-chat-border rounded-lg px-4 py-3 text-chat-text placeholder-chat-text-muted focus:outline-none focus:border-chat-user resize-none;
+  }
+  
+  .chat-button {
+    @apply px-6 py-2 bg-chat-user hover:bg-chat-user/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+}

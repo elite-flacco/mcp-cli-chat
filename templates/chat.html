@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Chat</title>
+    <link href="/static/dist/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <h1 class="text-xl font-semibold text-chat-text">Claude Chat</h1>
+            <p class="text-sm text-chat-text-muted">Use @document_id to reference documents, /command for prompts</p>
+        </header>
+
+        <!-- Messages Area -->
+        <main class="chat-messages" id="messages">
+            <div class="message message-assistant">
+                <div class="text-chat-text-muted text-sm mb-2">Assistant</div>
+                <div>Hello! I'm Claude. You can chat with me, reference documents with @document_id syntax, or use commands starting with /. How can I help you today?</div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="chat-input-container">
+            <form id="chat-form" class="flex gap-3">
+                <textarea 
+                    id="message-input" 
+                    class="chat-input" 
+                    placeholder="Type your message... Use @document_id to reference documents or /command for prompts"
+                    rows="1"
+                ></textarea>
+                <button type="submit" class="chat-button" id="send-button">
+                    Send
+                </button>
+            </form>
+        </footer>
+    </div>
+
+    <script>
+        // WebSocket connection
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        const messagesContainer = document.getElementById('messages');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const chatForm = document.getElementById('chat-form');
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+
+        // WebSocket event handlers
+        ws.onopen = function(event) {
+            console.log('Connected to WebSocket');
+        };
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'response') {
+                addMessage('assistant', data.content);
+            } else if (data.type === 'error') {
+                addMessage('error', data.content);
+            }
+            
+            sendButton.disabled = false;
+            sendButton.textContent = 'Send';
+        };
+
+        ws.onclose = function(event) {
+            console.log('WebSocket connection closed');
+            addMessage('error', 'Connection lost. Please refresh the page.');
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+            addMessage('error', 'Connection error. Please refresh the page.');
+        };
+
+        // Send message function
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Add user message to chat
+            addMessage('user', message);
+            
+            // Send to server
+            ws.send(JSON.stringify({
+                type: 'chat',
+                message: message
+            }));
+
+            // Clear input and show loading state
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            sendButton.disabled = true;
+            sendButton.textContent = 'Sending...';
+        }
+
+        // Add message to chat
+        function addMessage(type, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${type}`;
+            
+            const senderDiv = document.createElement('div');
+            senderDiv.className = 'text-chat-text-muted text-sm mb-2';
+            senderDiv.textContent = type === 'user' ? 'You' : type === 'error' ? 'Error' : 'Assistant';
+            
+            const contentDiv = document.createElement('div');
+            
+            // Handle markdown-like formatting for code blocks
+            if (content.includes('```')) {
+                contentDiv.innerHTML = formatCodeBlocks(content);
+            } else {
+                contentDiv.textContent = content;
+            }
+            
+            messageDiv.appendChild(senderDiv);
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Basic code block formatting
+        function formatCodeBlocks(text) {
+            return text.replace(/```(.*?)```/gs, '<pre class="bg-gray-800 rounded p-3 overflow-x-auto"><code>$1</code></pre>')
+                      .replace(/`([^`]+)`/g, '<code class="bg-gray-800 px-1 rounded">$1</code>');
+        }
+
+        // Form submission
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            sendMessage();
+        });
+
+        // Enter to send, Shift+Enter for new line
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

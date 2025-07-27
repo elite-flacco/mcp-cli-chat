@@ -5,3 +5,12 @@ __pycache__
 /chats
 /logs
 /docs
+/node_modules
+
+# Build artifacts
+app.egg-info/
+*.egg-info/
+
+
+# Claude Code
+.claude/

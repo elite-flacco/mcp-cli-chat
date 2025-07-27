@@ -19,6 +19,7 @@ Required environment variables in `.env`:
 
 ## Running the Application
 
+### CLI Interface
 ```bash
 # With uv (recommended)
 uv run main.py
@@ -29,6 +30,16 @@ python main.py
 # With additional MCP servers
 uv run main.py additional_server.py
 ```
+
+### Web Interface
+```bash
+# Start the web UI
+uv run start_web.py
+
+# Or with Python directly
+python start_web.py
+```
+Then open your browser to http://localhost:8000
 
 ## Development Commands
 
@@ -45,11 +56,15 @@ This is an MCP (Model Control Protocol) chat application with the following core
 
 ### Core Structure
 - `main.py`: Entry point that sets up logging, initializes MCP clients, and starts the CLI
+- `web_app.py`: FastAPI web interface with WebSocket chat support
+- `start_web.py`: Web server startup script
 - `core/claude.py`: Anthropic API wrapper with comprehensive logging
 - `core/cli_chat.py`: Main chat logic that handles document retrieval and command processing
 - `core/cli.py`: CLI interface with auto-completion and command suggestions
 - `mcp_server.py`: MCP server providing document tools, resources, and prompts
 - `mcp_client.py`: MCP client for communicating with servers
+- `templates/`: HTML templates for the web interface
+- `static/`: CSS and static files built with Tailwind CSS
 
 ### Key Features
 - **Document System**: Reference documents using `@document_id` syntax
