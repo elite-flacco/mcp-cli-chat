@@ -1,3 +1,4 @@
+import logging
 from typing import List, Tuple
 from mcp.types import Prompt, PromptMessage
 from anthropic.types import MessageParam
@@ -5,6 +6,9 @@ from anthropic.types import MessageParam
 from core.chat import Chat
 from core.claude import Claude
 from mcp_client import MCPClient
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class CliChat(Chat):
@@ -22,26 +26,43 @@ class CliChat(Chat):
         return await self.doc_client.list_prompts()
 
     async def list_docs_ids(self) -> list[str]:
-        return await self.doc_client.read_resource("docs://documents")
+        logger.debug("Listing available document IDs")
+        doc_ids = await self.doc_client.read_resource("docs://documents")
+        logger.info(f"Found {len(doc_ids)} available documents: {doc_ids}")
+        return doc_ids
 
     async def get_doc_content(self, doc_id: str) -> str:
-        return await self.doc_client.read_resource(f"docs://documents/{doc_id}")
+        logger.info(f"Retrieving content for document: {doc_id}")
+        content = await self.doc_client.read_resource(f"docs://documents/{doc_id}")
+        logger.debug(f"Document '{doc_id}' content length: {len(content)} characters")
+        return content
 
     async def get_prompt(
         self, command: str, doc_id: str
     ) -> list[PromptMessage]:
-        return await self.doc_client.get_prompt(command, {"doc_id": doc_id})
+        logger.info(f"Getting prompt '{command}' for document: {doc_id}")
+        messages = await self.doc_client.get_prompt(command, {"doc_id": doc_id})
+        logger.debug(f"Prompt '{command}' returned {len(messages)} messages")
+        return messages
 
     async def _extract_resources(self, query: str) -> str:
+        logger.debug(f"Extracting document references from query: {query[:100]}...")
         mentions = [word[1:] for word in query.split() if word.startswith("@")]
+        logger.info(f"Found document mentions: {mentions}")
 
         doc_ids = await self.list_docs_ids()
         mentioned_docs: list[Tuple[str, str]] = []
 
         for doc_id in doc_ids:
             if doc_id in mentions:
+                logger.info(f"Loading content for mentioned document: {doc_id}")
                 content = await self.get_doc_content(doc_id)
                 mentioned_docs.append((doc_id, content))
+
+        if mentioned_docs:
+            logger.info(f"Successfully loaded {len(mentioned_docs)} referenced documents")
+        else:
+            logger.debug("No document references found or loaded")
 
         return "".join(
             f'\n<document id="{doc_id}">\n{content}\n</document>\n'
@@ -52,20 +73,30 @@ class CliChat(Chat):
         if not query.startswith("/"):
             return False
 
+        logger.info(f"Processing command: {query}")
         words = query.split()
         command = words[0].replace("/", "")
+        doc_id = words[1] if len(words) > 1 else ""
+        
+        logger.info(f"Executing command '{command}' with document: {doc_id}")
 
         messages = await self.doc_client.get_prompt(
-            command, {"doc_id": words[1]}
+            command, {"doc_id": doc_id}
         )
 
-        self.messages += convert_prompt_messages_to_message_params(messages)
+        converted_messages = convert_prompt_messages_to_message_params(messages)
+        self.messages += converted_messages
+        logger.info(f"Command '{command}' added {len(converted_messages)} messages to conversation")
         return True
 
     async def _process_query(self, query: str):
+        logger.info(f"Processing user query: {query[:100]}...")
+        
         if await self._process_command(query):
+            logger.info("Query processed as command")
             return
 
+        logger.debug("Query is not a command, processing as regular query")
         added_resources = await self._extract_resources(query)
 
         prompt = f"""
@@ -87,6 +118,12 @@ class CliChat(Chat):
         """
 
         self.messages.append({"role": "user", "content": prompt})
+        logger.info(f"Added user query to conversation. Total messages: {len(self.messages)}")
+        
+        if added_resources:
+            logger.debug(f"Query includes {len([m for m in query.split() if m.startswith('@')])} document references")
+        else:
+            logger.debug("Query does not reference any documents")
 
 
 def convert_prompt_message_to_message_param(
