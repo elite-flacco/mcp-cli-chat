@@ -11,6 +11,11 @@ __pycache__
 app.egg-info/
 *.egg-info/
 
+# Coverage reports
+.coverage
+htmlcov/
+.coverage.*
+coverage.xml
 
 # Claude Code
 .claude/
