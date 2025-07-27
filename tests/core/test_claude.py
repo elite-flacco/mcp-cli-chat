@@ -1,7 +1,7 @@
 """Tests for core.claude module."""
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from anthropic.types import Message, MessageContent, TextBlockParam
+from anthropic.types import Message
 from anthropic.types.text_block import TextBlock
 
 from core.claude import Claude
@@ -110,6 +110,15 @@ class TestClaude:
         """Test basic chat functionality."""
         messages = [{"role": "user", "content": "Hello"}]
         mock_response = Mock(spec=Message)
+        mock_response.model = "claude-3-sonnet-20240229"
+        mock_response.stop_reason = "end_turn"
+        mock_response.usage = Mock()
+        mock_response.usage.input_tokens = 10
+        mock_response.usage.output_tokens = 5
+        mock_text_block = Mock()
+        mock_text_block.type = "text"
+        mock_text_block.text = "Hello response"
+        mock_response.content = [mock_text_block]
         claude_service.client.messages.create.return_value = mock_response
         
         result = claude_service.chat(messages)
@@ -125,6 +134,15 @@ class TestClaude:
         messages = [{"role": "user", "content": "Hello"}]
         system_message = "You are a helpful assistant."
         mock_response = Mock(spec=Message)
+        mock_response.model = "claude-3-sonnet-20240229"
+        mock_response.stop_reason = "end_turn"
+        mock_response.usage = Mock()
+        mock_response.usage.input_tokens = 15
+        mock_response.usage.output_tokens = 8
+        mock_text_block = Mock()
+        mock_text_block.type = "text"
+        mock_text_block.text = "System response"
+        mock_response.content = [mock_text_block]
         claude_service.client.messages.create.return_value = mock_response
         
         result = claude_service.chat(messages, system=system_message)
@@ -138,6 +156,15 @@ class TestClaude:
         messages = [{"role": "user", "content": "Hello"}]
         tools = [{"name": "test_tool", "description": "A test tool"}]
         mock_response = Mock(spec=Message)
+        mock_response.model = "claude-3-sonnet-20240229"
+        mock_response.stop_reason = "end_turn"
+        mock_response.usage = Mock()
+        mock_response.usage.input_tokens = 12
+        mock_response.usage.output_tokens = 6
+        mock_text_block = Mock()
+        mock_text_block.type = "text"
+        mock_text_block.text = "Tool response"
+        mock_response.content = [mock_text_block]
         claude_service.client.messages.create.return_value = mock_response
         
         result = claude_service.chat(messages, tools=tools)
@@ -150,14 +177,22 @@ class TestClaude:
         """Test chat with thinking mode enabled."""
         messages = [{"role": "user", "content": "Hello"}]
         mock_response = Mock(spec=Message)
+        mock_response.model = "claude-3-sonnet-20240229"
+        mock_response.stop_reason = "end_turn"
+        mock_response.usage = Mock()
+        mock_response.usage.input_tokens = 20
+        mock_response.usage.output_tokens = 10
+        mock_text_block = Mock()
+        mock_text_block.type = "text"
+        mock_text_block.text = "Thinking response"
+        mock_response.content = [mock_text_block]
         claude_service.client.messages.create.return_value = mock_response
         
         result = claude_service.chat(messages, thinking=True, thinking_budget=2048)
         
         assert result == mock_response
         call_args = claude_service.client.messages.create.call_args
-        assert call_args[1]["thinking"] is True
-        assert call_args[1]["thinking_budget"] == 2048
+        assert call_args[1]["thinking"] == {"type": "enabled", "budget_tokens": 2048}
 
     def test_chat_with_temperature_and_stop_sequences(self, claude_service):
         """Test chat with temperature and stop sequences."""
@@ -165,6 +200,15 @@ class TestClaude:
         temperature = 0.5
         stop_sequences = ["STOP", "END"]
         mock_response = Mock(spec=Message)
+        mock_response.model = "claude-3-sonnet-20240229"
+        mock_response.stop_reason = "stop_sequence"
+        mock_response.usage = Mock()
+        mock_response.usage.input_tokens = 18
+        mock_response.usage.output_tokens = 9
+        mock_text_block = Mock()
+        mock_text_block.type = "text"
+        mock_text_block.text = "Temperature response"
+        mock_response.content = [mock_text_block]
         claude_service.client.messages.create.return_value = mock_response
         
         result = claude_service.chat(
