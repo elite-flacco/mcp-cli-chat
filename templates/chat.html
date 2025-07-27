@@ -5,35 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claude Chat</title>
     <link href="/static/dist/style.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="chat-container">
         <!-- Header -->
         <header class="chat-header">
-            <h1 class="text-xl font-semibold text-chat-text">Claude Chat</h1>
-            <p class="text-sm text-chat-text-muted">Use @document_id to reference documents, /command for prompts</p>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-chat-user to-chat-assistant rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold text-chat-text">Claude Chat</h1>
+                        <p class="text-xs text-chat-text-muted">AI Assistant</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="connection-status flex items-center space-x-1" id="connection-status">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-xs text-chat-text-muted">Connected</span>
+                    </div>
+                </div>
+            </div>
+            <p class="text-sm text-chat-text-muted mt-2 opacity-75">Use @document_id to reference documents, /command for prompts</p>
         </header>
 
         <!-- Messages Area -->
         <main class="chat-messages" id="messages">
             <div class="message message-assistant">
-                <div class="text-chat-text-muted text-sm mb-2">Assistant</div>
-                <div>Hello! I'm Claude. You can chat with me, reference documents with @document_id syntax, or use commands starting with /. How can I help you today?</div>
+                <div class="message-header">
+                    <div class="message-avatar message-avatar-assistant">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    </div>
+                    <span class="message-sender">Assistant</span>
+                    <span class="message-time" id="initial-time"></span>
+                </div>
+                <div class="message-content">
+                    <div class="message-bubble message-bubble-assistant">
+                        Hello! I'm Claude. You can chat with me, reference documents with @document_id syntax, or use commands starting with /. How can I help you today?
+                    </div>
+                </div>
             </div>
         </main>
 
         <!-- Input Area -->
         <footer class="chat-input-container">
-            <form id="chat-form" class="flex gap-3">
-                <textarea 
-                    id="message-input" 
-                    class="chat-input" 
-                    placeholder="Type your message... Use @document_id to reference documents or /command for prompts"
-                    rows="1"
-                ></textarea>
-                <button type="submit" class="chat-button" id="send-button">
-                    Send
-                </button>
+            <form id="chat-form" class="chat-form">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="message-input" 
+                        class="chat-input" 
+                        placeholder="Type your message... Use @document_id to reference documents or /command for prompts"
+                        rows="1"
+                    ></textarea>
+                    <div class="input-actions">
+                        <button type="button" class="attachment-button" title="Attach document">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                            </svg>
+                        </button>
+                        <button type="submit" class="chat-button" id="send-button">
+                            <span class="send-text">Send</span>
+                            <svg class="w-4 h-4 send-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="input-hint">
+                    Press <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for new line
+                </div>
             </form>
         </footer>
     </div>
@@ -45,6 +93,10 @@
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
         const chatForm = document.getElementById('chat-form');
+        const connectionStatus = document.getElementById('connection-status');
+        
+        // Set initial time for welcome message
+        document.getElementById('initial-time').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
         // Auto-resize textarea
         messageInput.addEventListener('input', function() {
@@ -55,6 +107,7 @@
         // WebSocket event handlers
         ws.onopen = function(event) {
             console.log('Connected to WebSocket');
+            updateConnectionStatus('connected');
         };
 
         ws.onmessage = function(event) {
@@ -67,18 +120,43 @@
             }
             
             sendButton.disabled = false;
-            sendButton.textContent = 'Send';
+            sendButton.querySelector('.send-text').textContent = 'Send';
         };
 
         ws.onclose = function(event) {
             console.log('WebSocket connection closed');
+            updateConnectionStatus('disconnected');
             addMessage('error', 'Connection lost. Please refresh the page.');
         };
 
         ws.onerror = function(error) {
             console.error('WebSocket error:', error);
+            updateConnectionStatus('error');
             addMessage('error', 'Connection error. Please refresh the page.');
         };
+        
+        // Update connection status
+        function updateConnectionStatus(status) {
+            const statusIndicator = connectionStatus.querySelector('div');
+            const statusText = connectionStatus.querySelector('span');
+            
+            statusIndicator.className = 'w-2 h-2 rounded-full';
+            
+            switch(status) {
+                case 'connected':
+                    statusIndicator.classList.add('bg-green-500', 'animate-pulse');
+                    statusText.textContent = 'Connected';
+                    break;
+                case 'disconnected':
+                    statusIndicator.classList.add('bg-gray-500');
+                    statusText.textContent = 'Disconnected';
+                    break;
+                case 'error':
+                    statusIndicator.classList.add('bg-red-500', 'animate-pulse');
+                    statusText.textContent = 'Error';
+                    break;
+            }
+        }
 
         // Send message function
         function sendMessage() {
@@ -98,7 +176,7 @@
             messageInput.value = '';
             messageInput.style.height = 'auto';
             sendButton.disabled = true;
-            sendButton.textContent = 'Sending...';
+            sendButton.querySelector('.send-text').textContent = 'Sending...';
         }
 
         // Add message to chat
@@ -106,22 +184,69 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `message message-${type}`;
             
-            const senderDiv = document.createElement('div');
-            senderDiv.className = 'text-chat-text-muted text-sm mb-2';
-            senderDiv.textContent = type === 'user' ? 'You' : type === 'error' ? 'Error' : 'Assistant';
+            // Create message header
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'message-header';
             
-            const contentDiv = document.createElement('div');
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = `message-avatar message-avatar-${type}`;
+            
+            // Add appropriate icon for message type
+            const iconSvg = document.createElement('svg');
+            iconSvg.className = 'w-4 h-4';
+            iconSvg.setAttribute('fill', 'currentColor');
+            iconSvg.setAttribute('viewBox', '0 0 24 24');
+            
+            if (type === 'user') {
+                iconSvg.innerHTML = '<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>';
+            } else if (type === 'error') {
+                iconSvg.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>';
+            } else {
+                iconSvg.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>';
+            }
+            
+            avatarDiv.appendChild(iconSvg);
+            
+            const senderSpan = document.createElement('span');
+            senderSpan.className = 'message-sender';
+            senderSpan.textContent = type === 'user' ? 'You' : type === 'error' ? 'Error' : 'Assistant';
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'message-time';
+            timeSpan.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            headerDiv.appendChild(avatarDiv);
+            headerDiv.appendChild(senderSpan);
+            headerDiv.appendChild(timeSpan);
+            
+            // Create message content
+            const contentWrapper = document.createElement('div');
+            contentWrapper.className = 'message-content';
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = `message-bubble message-bubble-${type}`;
             
             // Handle markdown-like formatting for code blocks
             if (content.includes('```')) {
-                contentDiv.innerHTML = formatCodeBlocks(content);
+                bubbleDiv.innerHTML = formatCodeBlocks(content);
             } else {
-                contentDiv.textContent = content;
+                bubbleDiv.textContent = content;
             }
             
-            messageDiv.appendChild(senderDiv);
-            messageDiv.appendChild(contentDiv);
+            contentWrapper.appendChild(bubbleDiv);
+            
+            messageDiv.appendChild(headerDiv);
+            messageDiv.appendChild(contentWrapper);
             messagesContainer.appendChild(messageDiv);
+            
+            // Add entrance animation
+            messageDiv.style.opacity = '0';
+            messageDiv.style.transform = 'translateY(10px)';
+            requestAnimationFrame(() => {
+                messageDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                messageDiv.style.opacity = '1';
+                messageDiv.style.transform = 'translateY(0)';
+            });
             
             // Scroll to bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
