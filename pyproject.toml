@@ -49,9 +49,3 @@ markers = [
     "slow: Slow tests",
 ]
 
-[project.scripts]
-test = "pytest"
-test-coverage = "pytest --cov=core --cov=. --cov-report=html --cov-report=term-missing"
-test-verbose = "pytest -v"
-test-unit = "pytest -m unit"
-test-integration = "pytest -m integration"
