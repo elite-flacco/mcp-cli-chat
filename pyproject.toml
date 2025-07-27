@@ -15,6 +15,43 @@ dependencies = [
     "jinja2>=3.1.0",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-mock>=3.11.0",
+    "httpx>=0.25.0",
+    "pytest-cov>=4.1.0",
+]
+
 [tool.setuptools.packages.find]
 include = ["core*"]
 exclude = ["logs*", "chats*", "static*", "templates*", "node_modules*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--cov=core",
+    "--cov=.",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+]
+asyncio_mode = "auto"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow tests",
+]
+
+[project.scripts]
+test = "pytest"
+test-coverage = "pytest --cov=core --cov=. --cov-report=html --cov-report=term-missing"
+test-verbose = "pytest -v"
+test-unit = "pytest -m unit"
+test-integration = "pytest -m integration"
